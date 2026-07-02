@@ -13,7 +13,7 @@
   tasks:
     - name: Report remediation action requested by the SRE agent
       debug:
-        msg: "Agent decided '{{ action }}' for {{ service }} 
+        msg: "Agent decided '{{ action }}' for {{ service }}
         (severity: {{ severity }})"
 
     - name: Restart nginx (remediation for 'restart_service')
