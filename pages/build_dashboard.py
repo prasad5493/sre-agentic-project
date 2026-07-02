@@ -2,12 +2,10 @@
 
 import json
 import os
-import shutil
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORT = os.path.join(BASE_DIR, "agent", "incident_report.json")
 OUT_DIR = os.path.join(BASE_DIR, "public")
-EVIDENCE_DIR = os.path.join(BASE_DIR, "evidence")
 
 STATUS_COLORS = {"healthy": "#2ecc71", "warning": "#f39c12", "critical": "#e74c3c"}
 
@@ -43,50 +41,6 @@ CONCEPTS = [
 ]
 
 
-def build_evidence_section():
-    """Copies any screenshots from evidence/ into public/evidence/ and builds
-    an HTML section showing them. Returns an empty string if no images exist,
-    so the section simply does not appear until screenshots are added."""
-    if not os.path.isdir(EVIDENCE_DIR):
-        return ""
-
-    images = sorted(
-        f for f in os.listdir(EVIDENCE_DIR)
-        if f.lower().endswith((".png", ".jpg", ".jpeg"))
-    )
-    if not images:
-        return ""
-
-    out_evidence_dir = os.path.join(OUT_DIR, "evidence")
-    os.makedirs(out_evidence_dir, exist_ok=True)
-
-    cards = ""
-    for image_name in images:
-        shutil.copy(
-            os.path.join(EVIDENCE_DIR, image_name),
-            os.path.join(out_evidence_dir, image_name),
-        )
-        caption = os.path.splitext(image_name)[0]
-        caption = caption.replace("_", " ").replace("-", " ").strip()
-        caption = " ".join(word for word in caption.split(" ") if not word.isdigit())
-        caption = caption.title()
-        cards += f"""
-    <div class="evidence-card">
-      <img src="evidence/{image_name}" alt="{caption}">
-      <div class="evidence-caption">{caption}</div>
-    </div>"""
-
-    return f"""
-  <h2>Real AWS Deployment Evidence</h2>
-  <p class="status-intro">
-    The IAM role and permission policy defined in infra/iam-role.yaml were
-    deployed to a real AWS account using CloudFormation. The screenshots
-    below were taken directly from that deployment.
-  </p>
-  <div class="evidence-grid">{cards}
-  </div>"""
-
-
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(REPORT) as f:
@@ -109,10 +63,10 @@ def main():
   .badge {{ display: inline-block; padding: 6px 14px; border-radius: 20px;
             color: white; background: {color}; font-weight: 600;
             text-transform: uppercase; font-size: 13px; }}
-  h1 {{ font-size: 24px; margin-bottom: 4px; }}
+  h1 {{ font-size: 22px; margin-bottom: 6px; }}
   h2 {{ font-size: 18px; margin-top: 40px; margin-bottom: 12px; }}
   ul {{ line-height: 1.7; padding-left: 20px; }}
-  .author {{ color: #444; font-size: 20px; font-weight: 700; margin-top: 4px; }}
+  .author {{ color: #222; font-size: 28px; font-weight: 800; margin-top: 2px; }}
   .description {{ background: #f6f8fa; border-radius: 6px; padding: 16px 18px;
                    font-size: 14px; line-height: 1.6; margin: 20px 0; }}
   .concepts {{ background: #ffffff; border: 1px solid #e1e4e8; border-radius: 6px;
@@ -126,17 +80,12 @@ def main():
   .status-row {{ margin-bottom: 14px; font-size: 14px; line-height: 1.6; }}
   .status-row:last-child {{ margin-bottom: 0; }}
   .status-row .label {{ font-weight: 600; }}
-  .evidence-grid {{ display: flex; flex-wrap: wrap; gap: 16px; }}
-  .evidence-card {{ width: calc(50% - 8px); border: 1px solid #e1e4e8;
-                     border-radius: 6px; overflow: hidden; background: #fff; }}
-  .evidence-card img {{ width: 100%; display: block; }}
-  .evidence-caption {{ font-size: 13px; color: #444; padding: 8px 10px; }}
   .meta {{ color: #777; font-size: 13px; margin-top: 30px; }}
 </style>
 </head>
 <body>
+  <div class="author">Prasad Bhor</div>
   <h1>SRE Agentic Project</h1>
-  <div class="author">Built by Prasad Bhor</div>
 
   <p class="description">
     This project watches a website and checks whether it is running well. It
@@ -178,7 +127,7 @@ def main():
 
   <h2>Key Concepts Used In This Project</h2>
   <ul class="concepts">{concepts_html}</ul>
-  {build_evidence_section()}
+
   <div class="meta">Generated {report['generated_at']} by the automated pipeline</div>
 </body>
 </html>"""
