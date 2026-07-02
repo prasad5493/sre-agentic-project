@@ -1,97 +1,35 @@
-# SRE Agentic Toolkit
+# SRE Agentic Project
 
-Built by **Prasad Bhor**
+Built by Prasad Bhor
 
-## What is this, actually?
+## What This Project Does
 
-Imagine you run a website and you want to know the moment something
-goes wrong with it — like it getting slow, or errors piling up. You'd
-also love it if the fix could happen automatically instead of you
-staying up at 2am to restart a server.
+Imagine you run a website and you want to know the moment something goes wrong with it, such as the site becoming slow or errors starting to pile up. You will also want the fix to happen automatically, instead of staying up late to restart a server yourself.
 
-That's what this project is: a tiny robot that
+This project is a small robot that does exactly that. It checks the website health information, decides whether things look fine, need attention, or are broken, tells another tool what to do about it, such as restarting the service, and publishes a simple status page showing what it found and why. All of this happens automatically every time new code is pushed to the repository.
 
-1. **checks** your website's health stats (CPU load, error rate,
-   response time),
-2. **decides** whether things look fine, a bit worrying, or broken,
-3. **tells another tool what to do about it** (like "restart the
-   service"),
-4. and **publishes a simple status page** showing what it found and
-   why — automatically, every time I push new code.
+This project was built to practice and demonstrate a few important DevOps and Site Reliability Engineering skills together in one small working example. These include infrastructure as code, configuration management, continuous integration and deployment, and the observe, decide, act pattern that agentic automation is built on. The project does not use real AWS resources or cost any money to explore, since the health information used by the agent comes from a sample file rather than a live AWS account.
 
-I built this to practice (and demonstrate) a few core DevOps/SRE
-skills together in one small, working example: infrastructure as
-code, config management, CI/CD, and the "observe → decide → act" loop
-that agentic automation is built on. Nothing here touches real AWS
-money — the "health stats" are a mock JSON file, so anyone can clone
-this and run it with zero cloud account needed.
+## How The Different Parts Work Together
 
-## How the pieces fit together
+The file `agent/mock_metrics.json` contains sample health information that stands in for real AWS CloudWatch data. It includes values such as CPU usage, error rate, response time, and how many servers are currently healthy.
 
-- `agent/mock_metrics.json` — fake health stats standing in for real
-  AWS CloudWatch data (CPU%, error rate, latency, how many instances
-  are healthy).
-- `agent/sre_agent.py` — the "brain." Reads the stats, checks them
-  against thresholds, decides how serious it is, and writes down its
-  reasoning plus what it decided to do about it.
-- `ansible/` — the "hands." If the agent says "restart the service,"
-  this is the Ansible playbook that actually does it.
-- `infra/iam-role.yaml` — an AWS permissions template. Gives the agent
-  only the two permissions it actually needs (read monitoring data,
-  basic server access) instead of a master key to everything.
-- `pages/build_dashboard.py` — takes the agent's decision and turns it
-  into a simple webpage.
-- `.gitlab-ci.yml` / `.github/workflows/deploy.yml` — the automation
-  that runs all of the above every time I push code, and publishes the
-  resulting webpage.
+The file `agent/sre_agent.py` acts as the brain of the project. It reads the health information, compares each value against a set of thresholds, and decides how serious the situation is. It then records its reasoning and writes down what action should be taken.
 
-## Important commands (the ones that actually matter)
+The `ansible` folder contains the automation that acts on the agent decision. If the agent decides the service should be restarted, this is the part that actually performs the restart. The variable used to pass this decision is named `remediation_action`, since the word `action` is reserved by Ansible itself and cannot be used as a custom variable name. Every task in this folder also uses the full module name, such as `ansible.builtin.service`, instead of a shortened name. This is a modern best practice that removes any confusion about which collection a module belongs to.
 
-Run the agent and see what it decided:
-```bash
-python agent/sre_agent.py
-```
+The file `infra/iam-role.yaml` defines an AWS permission template. It gives the agent only the two permissions it actually needs, which are reading monitoring data and basic managed server access, instead of full access to the AWS account. This follows the security principle known as least privilege, meaning a system should only be given the access it truly needs to do its job.
 
-Have Ansible act on the agent's decision (e.g. restart the service):
-```bash
-ansible-playbook -i ansible/inventory.ini ansible/site.yml -e @agent/remediation_vars.json
-```
+The file `pages/build_dashboard.py` takes the agent decision and turns it into a simple webpage that anyone can view.
 
-Build the status page locally, to see it before pushing:
-```bash
-python pages/build_dashboard.py
-```
+The files `.gitlab-ci.yml` and `.github/workflows/deploy.yml` describe the automated pipeline that runs all of the steps above every time code is pushed, and then publishes the resulting webpage. Both pipelines run the same four steps in order, checking the Ansible files for style issues, checking the AWS permission template for mistakes, running the agent, and publishing the final page.
 
-Check the Ansible playbook for mistakes before running it:
-```bash
-ansible-lint ansible/site.yml
-```
+The project also includes a `.yamllint` configuration file. By default, the tool that checks YAML formatting only allows lines up to eighty characters, which is often too strict for real Ansible files. This file raises that limit to a more realistic one hundred and twenty characters, which is a common setting used by real Ansible projects.
 
-Check the AWS permissions template for mistakes:
-```bash
-cfn-lint infra/iam-role.yaml
-```
+## Why It Is Built This Way
 
-Deploy the real IAM role to AWS (only if you actually want it in your
-own AWS account):
-```bash
-aws cloudformation deploy --template-file infra/iam-role.yaml --stack-name sre-agent-role --capabilities CAPABILITY_NAMED_IAM
-```
+The permissions given to the agent are intentionally limited. The AWS role only allows reading monitoring information and basic managed access, and nothing that could change or delete other resources in the account. This is the least privilege principle in practice.
 
-## Why I built it this way
+The agent currently uses simple rule based logic rather than a live artificial intelligence model. A clear extension point named `call_llm_for_triage` is included in the code to show exactly where a real AI model, such as Claude, could be added later to handle cases that do not fit clean rules. This project aims to show a clear understanding of how an agentic system is structured, rather than presenting a more advanced system than what has actually been built.
 
-- **The permissions are locked down on purpose.** The IAM role only
-  gets two abilities — reading monitoring data and basic managed
-  server access — nothing that could change or delete other things in
-  the account. That's the "least privilege" principle: give a thing
-  only the access it needs to do its one job.
-- **The "AI" part is honest about what it is.** Right now the agent
-  uses simple if/then rules, not a live language model. I left a clear
-  spot in the code (`call_llm_for_triage`) where a real model like
-  Claude could take over for trickier cases that don't fit clean
-  thresholds. I'd rather show I understand the shape of an agentic
-  system than fake a fancier version of it.
-- **Everything is automated end-to-end.** I never manually upload the
-  status page — pushing code is the only step. The pipeline lints the
-  config, validates the AWS template, runs the agent, and republishes
-  the page every single time.
+Every part of this project is automated from start to finish. The status page is never updated by hand. Pushing code is the only action needed, and the pipeline takes care of checking the code, running the agent, and publishing the updated page every time.
