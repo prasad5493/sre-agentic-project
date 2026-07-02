@@ -3,7 +3,7 @@
   hosts: webservers
   become: true
   vars:
-    action: "no_action"
+    remediation_action: "no_action"
     service: "checkout-api"
     severity: "healthy"
 
@@ -12,17 +12,16 @@
 
   tasks:
     - name: Report remediation action requested by the SRE agent
-      debug:
-        msg: "Agent decided '{{ action }}' for {{ service }}
-        (severity: {{ severity }})"
+      ansible.builtin.debug:
+        msg: "Agent decided '{{ remediation_action }}' for {{ service }} (severity: {{ severity }})"
 
     - name: Restart nginx (remediation for 'restart_service')
-      service:
+      ansible.builtin.service:
         name: nginx
         state: restarted
-      when: action == "restart_service"
+      when: remediation_action == "restart_service"
 
     - name: Log scale-out remediation (real version calls the ASG API)
-      debug:
+      ansible.builtin.debug:
         msg: "Would trigger Auto Scaling Group scale-out for {{ service }}"
-      when: action == "scale_out"
+      when: remediation_action == "scale_out"

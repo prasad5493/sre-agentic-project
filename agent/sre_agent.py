@@ -69,7 +69,7 @@ def act(severity, action, service):
       ansible-playbook -i ansible/inventory.ini ansible/site.yml \
         -e @agent/remediation_vars.json
     """
-    payload = {"service": service, "action": action, "severity": severity}
+    payload = {"service": service, "remediation_action": action, "severity": severity}
     if action != "no_action":
         with open(VARS_FILE, "w") as f:
             json.dump(payload, f, indent=2)
