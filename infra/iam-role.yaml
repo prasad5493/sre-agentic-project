@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Least-privilege IAM role for SRE agent EC2 instances. Grants only
+  SSM managed-instance access (no SSH keys needed) and read-only
+  CloudWatch metrics - no write/admin permissions, since this role
+  only needs to observe system health, not manage other resources.
+
+Resources:
+  SREAgentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sre-agent-instance-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: CloudWatchReadOnly
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricData
+                  - cloudwatch:ListMetrics
+                  - cloudwatch:DescribeAlarms
+                Resource: "*"
+
+  SREAgentInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref SREAgentRole
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt SREAgentRole.Arn
+  InstanceProfileArn:
+    Value: !GetAtt SREAgentInstanceProfile.Arn

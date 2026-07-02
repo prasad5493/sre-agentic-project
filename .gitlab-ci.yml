@@ -1,0 +1,45 @@
+stages:
+  - lint
+  - validate
+  - agent
+  - pages
+
+ansible-lint:
+  stage: lint
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet ansible-lint yamllint
+  script:
+    - yamllint ansible/
+    - ansible-lint ansible/site.yml
+
+cfn-lint:
+  stage: validate
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet cfn-lint
+  script:
+    - cfn-lint infra/iam-role.yaml
+
+sre-agent:
+  stage: agent
+  image: python:3.11-slim
+  script:
+    - python agent/sre_agent.py
+  artifacts:
+    paths:
+      - agent/incident_report.json
+      - agent/remediation_vars.json
+    expire_in: 1 week
+
+pages:
+  stage: pages
+  image: python:3.11-slim
+  needs: ["sre-agent"]
+  script:
+    - python pages/build_dashboard.py
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'

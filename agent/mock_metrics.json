@@ -1,0 +1,11 @@
+{
+  "service": "checkout-api",
+  "timestamp": "2026-07-02T10:00:00Z",
+  "metrics": {
+    "cpu_utilization": 92,
+    "error_rate_percent": 7.5,
+    "p95_latency_ms": 1450,
+    "healthy_instances": 2,
+    "total_instances": 4
+  }
+}

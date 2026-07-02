@@ -1,0 +1,27 @@
+---
+- name: Configure web service and apply agent-decided remediation
+  hosts: webservers
+  become: true
+  vars:
+    action: "no_action"
+    service: "checkout-api"
+    severity: "healthy"
+
+  roles:
+    - webserver
+
+  tasks:
+    - name: Report remediation action requested by the SRE agent
+      debug:
+        msg: "Agent decided '{{ action }}' for {{ service }} (severity: {{ severity }})"
+
+    - name: Restart nginx (remediation for 'restart_service')
+      service:
+        name: nginx
+        state: restarted
+      when: action == "restart_service"
+
+    - name: Log scale-out remediation (real version calls the ASG API)
+      debug:
+        msg: "Would trigger Auto Scaling Group scale-out for {{ service }}"
+      when: action == "scale_out"

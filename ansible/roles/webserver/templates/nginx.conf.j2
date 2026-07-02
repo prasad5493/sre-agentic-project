@@ -1,0 +1,17 @@
+user www-data;
+worker_processes auto;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  server {
+    listen 80;
+    server_name {{ service | default('checkout-api') }}.local;
+
+    location / {
+      return 200 "{{ service | default('checkout-api') }} healthy\n";
+    }
+  }
+}
