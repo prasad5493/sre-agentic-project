@@ -13,7 +13,9 @@
   tasks:
     - name: Report remediation action requested by the SRE agent
       ansible.builtin.debug:
-        msg: "Agent decided '{{ remediation_action }}' for {{ service }} (severity: {{ severity }})"
+        msg: >-
+          Agent decided '{{ remediation_action }}' for {{ service }}
+          (severity: {{ severity }})
 
     - name: Restart nginx (remediation for 'restart_service')
       ansible.builtin.service:
